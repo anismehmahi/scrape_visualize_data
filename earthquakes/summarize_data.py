@@ -25,6 +25,7 @@ for filename in os.listdir(data_dir):
                     summary = {
                         "id": earthquake.get("id"),
                         "adresse": earthquake["properties"].get("place"),
+                        "mag":earthquake["properties"].get("mag")
                                             }
                     
                     detail_url = earthquake["properties"].get("detail")
@@ -36,6 +37,7 @@ for filename in os.listdir(data_dir):
                                 products_origin = detail_data['properties']['products']['origin'][0]['properties']
                                 
                                 summary.update({
+                                
                                     "depth": products_origin.get("depth"),
                                     "latitude": products_origin.get("latitude"),
                                     "longitude": products_origin.get("longitude"),
