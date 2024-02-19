@@ -26,10 +26,18 @@ def fetch_earthquake_data():
 def display_meteo_tab():
     collection = client[mongo_database]['summary']
     dates_list = [entry['summary_date'] for entry in collection.find({}, {'summary_date': 1})]
-    selected_date = st.selectbox('Select a date', dates_list)
+    selected_date = st.sidebar.selectbox('Select a date', dates_list,index=0)
     selected_data = fetch_meteo_data(selected_date)
+    # Utiliser une boîte de sélection pour choisir le type de visualisation
+    visualization_type = st.sidebar.selectbox("Choose Visualization Type", ["Histogram","Table", "Boxplot"] )
 
-    st.write(f"Statistics for the date: {selected_date}")
+
+ # Format the date string for better readability
+    if isinstance(selected_date, str):
+                formatted_date = datetime.strptime(selected_date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S")
+    else:
+                formatted_date = selected_date.strftime("%Y-%m-%d %H:%M:%S")
+    st.title(f"Statistics for the date: {formatted_date}")
     data = {
         "Temperature (°C)": {
             "min": selected_data["min"]["t_2m:C"],
@@ -57,12 +65,64 @@ def display_meteo_tab():
         "mean": selected_data["mean"]["msl_pressure:hPa"],
     },
     }
+    if visualization_type == "Boxplot":
+        for variable, values in data.items():
+            fig = px.box(y=list(values.values()), labels={"value": variable})
+            fig.update_layout(title=f"Statistics for {variable}", yaxis_title="Values")
+            st.plotly_chart(fig)
 
-    for variable, values in data.items():
-        fig = px.box(y=list(values.values()), labels={"value": variable})
-        fig.update_layout(title=f"Statistics for {variable}", yaxis_title="Values")
-        st.plotly_chart(fig)
+    elif visualization_type == "Histogram":
+        bar_names = ['min', 'mean', 'std', 'max']
 
+        for variable, values in data.items():
+            if values:
+                data_values = [values[stat] for stat in bar_names]
+
+                # Check if any value is zero
+                if any(val == 0 for val in data_values):
+                    fig = go.Figure()
+                    for stat, value in zip(bar_names, data_values):
+                        # Use red color for bars with zero values
+                        color = 'red' if value == 0 else 'blue'
+                        stat=stat  if value == 1 else stat+"= 0"
+                        fig.add_trace(go.Bar(x=[stat], y=[value], name=f' {stat}', marker_color=color))
+                else:
+                    fig = go.Figure()
+                    fig.add_trace(go.Bar(x=bar_names, y=data_values, name=variable, marker_color='blue'))
+
+                fig.update_layout(title=f"Distribution of {variable}", xaxis_title="Statistics", yaxis_title="Values")
+                st.plotly_chart(fig)
+            else:
+                st.warning(f"No data available for {variable}")
+
+
+    elif visualization_type == "Table":
+       for variable, values in data.items():
+        # Créer un tableau HTML pour chaque variable
+        html_table = """
+        <table>
+            <tr>
+                <th>Variable</th>
+                <th>Minimum</th>
+                <th>Maximum</th>
+                <th>Moyenne</th>
+                <th>Ecart-type</th>
+            </tr>
+        """
+        html_table += f"""
+        <tr>
+            <td>{variable}</td>
+            <td>{values["min"]}</td>
+            <td>{values["max"]}</td>
+            <td>{values["mean"]}</td>
+            <td>{values["std"]}</td>
+        </tr>
+        """
+        html_table += "</table>"
+        st.header(variable)
+
+        # Afficher le tableau HTML
+        st.write(html_table, unsafe_allow_html=True)
 
 # Helper function to convert timestamp to a Python datetime object
 def parse_timestamp(timestamp_str):
@@ -165,7 +225,7 @@ def main():
 
     st.sidebar.title("Data Selection")
     # Ajouter 2 tabs de ilyes et mazigh
-    app_mode = st.sidebar.selectbox("Choose the data you want to view:", ["Earthquakes", "Meteo", ])
+    app_mode = st.sidebar.selectbox("Choose the data you want to view:", [ "Meteo","Earthquakes", ])
 
 
     # ici aussi
