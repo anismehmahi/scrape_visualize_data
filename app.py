@@ -4,11 +4,22 @@ from pymongo import MongoClient
 import plotly.express as px
 from datetime import datetime
 import plotly.graph_objects as go
+import colorsys
 
 # Initialize MongoDB connection
 client = MongoClient('mongodb://localhost:27017/')
 mongo_database = 'meteo_data'
-
+def lighten_color(color, amount):
+  """
+  Lightens a given color by a specified amount (0-1).
+  """
+  try:
+    h, l, s = colorsys.rgb_to_hls(*color)
+    l = (l + amount) % 1
+    return colorsys.hls_to_rgb(h, l, s)
+  except (TypeError, ValueError):
+    # Handle potential errors with color input
+    return color
 # Function to fetch Meteo data
 def fetch_meteo_data(selected_date):
     db = client[mongo_database]
@@ -38,33 +49,46 @@ def display_meteo_tab():
     else:
                 formatted_date = selected_date.strftime("%Y-%m-%d %H:%M:%S")
     st.title(f"Statistics for the date: {formatted_date}")
+  # Extracting additional information (25%, 50%, 75%) for each variable
     data = {
-        "Temperature (°C)": {
-            "min": selected_data["min"]["t_2m:C"],
-            "max": selected_data["max"]["t_2m:C"],
-            "std": selected_data["std"]["t_2m:C"],
-            "mean": selected_data["mean"]["t_2m:C"],
-        },
-        "Precipitations (mm)": {
-            "min": selected_data["min"]["precip_1h:mm"],
-            "max": selected_data["max"]["precip_1h:mm"],
-            "std": selected_data["std"]["precip_1h:mm"],
-            "mean": selected_data["mean"]["precip_1h:mm"],
-        },
-        # Add other variables as needed
+    "Temperature (°C)": {
+        "min": selected_data["min"]["t_2m:C"],
+        "max": selected_data["max"]["t_2m:C"],
+        "std": selected_data["std"]["t_2m:C"],
+        "mean": selected_data["mean"]["t_2m:C"],
+        "25%": selected_data["25%"]["t_2m:C"],
+        "50%": selected_data["50%"]["t_2m:C"],
+        "75%": selected_data["75%"]["t_2m:C"],
+    },
+    "Precipitations (mm)": {
+        "min": selected_data["min"]["precip_1h:mm"],
+        "max": selected_data["max"]["precip_1h:mm"],
+        "std": selected_data["std"]["precip_1h:mm"],
+        "mean": selected_data["mean"]["precip_1h:mm"],
+        "25%": selected_data["25%"]["precip_1h:mm"],
+        "50%": selected_data["50%"]["precip_1h:mm"],
+        "75%": selected_data["75%"]["precip_1h:mm"],
+    },
     "Vitesse du vent (m/s)": {
         "min": selected_data["min"]["wind_speed_10m:ms"],
         "max": selected_data["max"]["wind_speed_10m:ms"],
         "std": selected_data["std"]["wind_speed_10m:ms"],
         "mean": selected_data["mean"]["wind_speed_10m:ms"],
+        "25%": selected_data["25%"]["wind_speed_10m:ms"],
+        "50%": selected_data["50%"]["wind_speed_10m:ms"],
+        "75%": selected_data["75%"]["wind_speed_10m:ms"],
     },
     "Pression au niveau de la mer (hPa)": {
         "min": selected_data["min"]["msl_pressure:hPa"],
         "max": selected_data["max"]["msl_pressure:hPa"],
         "std": selected_data["std"]["msl_pressure:hPa"],
         "mean": selected_data["mean"]["msl_pressure:hPa"],
+        "25%": selected_data["25%"]["msl_pressure:hPa"],
+        "50%": selected_data["50%"]["msl_pressure:hPa"],
+        "75%": selected_data["75%"]["msl_pressure:hPa"],
     },
-    }
+}
+
     if visualization_type == "Boxplot":
         for variable, values in data.items():
             fig = px.box(y=list(values.values()), labels={"value": variable})
@@ -72,57 +96,67 @@ def display_meteo_tab():
             st.plotly_chart(fig)
 
     elif visualization_type == "Histogram":
-        bar_names = ['min', 'mean', 'std', 'max']
+        bar_names = ['min', '25%', 'mean', '75%', 'max']
+       
 
         for variable, values in data.items():
             if values:
                 data_values = [values[stat] for stat in bar_names]
 
-                # Check if any value is zero
-                if any(val == 0 for val in data_values):
-                    fig = go.Figure()
-                    for stat, value in zip(bar_names, data_values):
-                        # Use red color for bars with zero values
-                        color = 'red' if value == 0 else 'blue'
-                        stat=stat  if value == 1 else stat+"= 0"
-                        fig.add_trace(go.Bar(x=[stat], y=[value], name=f' {stat}', marker_color=color))
-                else:
-                    fig = go.Figure()
-                    fig.add_trace(go.Bar(x=bar_names, y=data_values, name=variable, marker_color='blue'))
+                # Create a figure with the specified colors
+                fig = go.Figure(layout_template='plotly_white')  # Optional: Set a white background
+                for stat, value in zip(bar_names, data_values):
+                    
+                    stat_label = f'{stat} (Zero)' if value == 0 else stat
+                    color = "Blue" if value != 0 else "Red"
+                    fig.add_trace(go.Bar(x=[stat_label], y=[value], name=f'{stat}', marker_color=color))
 
-                fig.update_layout(title=f"Distribution of {variable}", xaxis_title="Statistics", yaxis_title="Values")
+                # Add spacing and layout
+                fig.update_layout(
+                    title=f"Distribution of {variable}",
+                    xaxis_title="Statistics",
+                    yaxis_title="Values",
+                    barmode='group',
+                    bargap=0.2
+                )
                 st.plotly_chart(fig)
             else:
                 st.warning(f"No data available for {variable}")
 
 
-    elif visualization_type == "Table":
-       for variable, values in data.items():
-        # Créer un tableau HTML pour chaque variable
-        html_table = """
-        <table>
-            <tr>
-                <th>Variable</th>
-                <th>Minimum</th>
-                <th>Maximum</th>
-                <th>Moyenne</th>
-                <th>Ecart-type</th>
-            </tr>
-        """
-        html_table += f"""
-        <tr>
-            <td>{variable}</td>
-            <td>{values["min"]}</td>
-            <td>{values["max"]}</td>
-            <td>{values["mean"]}</td>
-            <td>{values["std"]}</td>
-        </tr>
-        """
-        html_table += "</table>"
-        st.header(variable)
 
-        # Afficher le tableau HTML
-        st.write(html_table, unsafe_allow_html=True)
+    elif visualization_type == "Table":
+        for variable, values in data.items():
+            # Créer un tableau HTML pour chaque variable
+            html_table = """
+            <table>
+                <tr>
+                    <th>Variable</th>
+                    <th>Minimum</th>
+                    <th>25%</th>
+                    <th>Moyenne</th>
+                    <th>75%</th>
+                    <th>Maximum</th>
+                    <th>Ecart-type</th>
+                </tr>
+            """
+            html_table += f"""
+            <tr>
+                <td>{variable}</td>
+                <td>{values["min"]}</td>
+                <td>{values["25%"]}</td>
+                <td>{values["mean"]}</td>
+                <td>{values["75%"]}</td>
+                <td>{values["max"]}</td>
+                <td>{values["std"]}</td>
+            </tr>
+            """
+            html_table += "</table>"
+            st.header(variable)
+
+            # Afficher le tableau HTML
+            st.write(html_table, unsafe_allow_html=True)
+
 
 # Helper function to convert timestamp to a Python datetime object
 def parse_timestamp(timestamp_str):
