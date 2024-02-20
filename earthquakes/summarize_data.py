@@ -25,7 +25,8 @@ for filename in os.listdir(data_dir):
                     summary = {
                         "id": earthquake.get("id"),
                         "adresse": earthquake["properties"].get("place"),
-                        "mag":earthquake["properties"].get("mag")
+                        "mag":earthquake["properties"].get("mag"),
+                        #"timestamp":earthquake["properties"].get("time")
                                             }
                     
                     detail_url = earthquake["properties"].get("detail")

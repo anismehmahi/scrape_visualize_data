@@ -82,8 +82,11 @@ def fetch_filtered_earthquake_data(region=None, start_date=None, end_date=None):
     
     earthquakes = list(collection.find(query))
     for eq in earthquakes:
-        # print(eq)
-        eq["timestamp"] = parse_timestamp(eq["timestamp"])
+        #print(eq["timestamp"])
+        try:
+        	eq["timestamp"] = parse_timestamp(eq["timestamp"])
+        except:
+        	pass
     
     return pd.DataFrame(earthquakes)
 
