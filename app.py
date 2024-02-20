@@ -48,7 +48,7 @@ def display_meteo_tab():
                 formatted_date = datetime.strptime(selected_date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S")
     else:
                 formatted_date = selected_date.strftime("%Y-%m-%d %H:%M:%S")
-    st.title(f"Statistics for the date: {formatted_date}")
+    st.header(f"Statistics for the date: {formatted_date}")
   # Extracting additional information (25%, 50%, 75%) for each variable
     data = {
     "Temperature (°C)": {
