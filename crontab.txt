@@ -1,3 +1,5 @@
 0 * * * * /home/anis/Desktop/projetLinux/scrape_visualize_data/earthquakes/download_data.sh
 3 * * * * /home/anis/Desktop/projetLinux/scrape_visualize_data/earthquakes/summarize_data.py
+0 0 * * * /home/anis/Desktop/projetLinux/scrape_visualize_data/meteo_script/script.sh
+5 0 * * *  python3 /home/anis/Desktop/projetLinux/scrape_visualize_data/meteo_script/main.py
 10 * * * * /home/anis/Desktop/projetLinux/scrape_visualize_data/app.py
