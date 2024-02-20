@@ -152,7 +152,7 @@ def display_meteo_tab():
             </tr>
             """
             html_table += "</table>"
-            st.header(variable)
+            st.subheader(variable)
 
             # Afficher le tableau HTML
             st.write(html_table, unsafe_allow_html=True)
