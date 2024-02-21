@@ -33,6 +33,8 @@ def fetch_earthquake_data():
     collection = db['summaries']  # Update with your actual collection name
     return pd.DataFrame(list(collection.find()))  # Convert the MongoDB cursor to a DataFrame
 
+
+
 # Function to display Meteo statistics and charts
 def display_meteo_tab():
     collection = client[mongo_database]['summary']
@@ -254,6 +256,92 @@ def display_earthquake_tab():
         st.write("No earthquake data available for the selected filters.")
 
 
+# --------------------------------- Stock Data ---------------------------------    
+        
+def fetch_stock_data():
+    db = client['donnees_bourse']
+    collection = db['resume_donnees_bourse']
+    df = pd.DataFrame(list(collection.find()))
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    return df
+
+def filtered_stock_data(stock_name=None,start_date=None, end_date=None):
+    db = client['donnees_bourse']
+    collection = db['resume_donnees_bourse']
+    unfiltered = pd.DataFrame(list(collection.find()))
+    unfiltered['timestamp'] = pd.to_datetime(unfiltered['timestamp'])
+
+    if stock_name:
+        unfiltered = unfiltered[unfiltered['stock_name'] == stock_name]
+
+    if start_date:
+        unfiltered = unfiltered[unfiltered['timestamp'] >= pd.to_datetime(start_date)]
+    if end_date:
+        unfiltered = unfiltered[unfiltered['timestamp'] <= pd.to_datetime(end_date)]
+
+    return unfiltered
+
+def stock_names():
+    db = client['donnees_bourse']
+    collection = db['resume_donnees_bourse']
+    return collection.distinct('stock_name')
+
+def display_stock_tab():
+    st.title("Stock Prices")
+    db = client['donnees_bourse']
+    collection = db['resume_donnees_bourse']
+
+    unique_sotck_names = stock_names()
+    unique_sotck_names.insert(0, 'All Stocks')
+    selected_stock = st.sidebar.selectbox("Select a stock", unique_sotck_names, index=0)
+
+    start_date = st.sidebar.date_input("Start date", value=None)
+    end_date = st.sidebar.date_input("End date", value=None)
+
+
+    visualization_type = st.sidebar.selectbox("Choose Visualization Type", ["line plot","candle plot"] )
+
+    if selected_stock != 'All Stocks':
+        data = filtered_stock_data(selected_stock, start_date, end_date)
+    else:
+        data = filtered_stock_data(None, start_date, end_date)
+
+    if not data.empty:
+        if ((start_date==None) and (end_date==None)):
+            st.write(f"Displaying Stock prices for : {selected_stock}") 
+        elif ((start_date!=None) and (end_date==None)):
+            st.write(f"Displaying Stock prices for : {selected_stock} from {start_date}") 
+        elif ((start_date==None) and (end_date!=None)):
+            st.write(f"Displaying Stock prices for : {selected_stock} until {end_date}")
+        else:
+            st.write(f"Displaying Stock prices for : {selected_stock} from {start_date} to {end_date}")
+
+
+    if visualization_type == "line plot":
+        data.set_index('timestamp', inplace=True)
+        fig = px.line(data, x=data.index, y='4. close', color='stock_name', labels={'4. close': 'Closing Price'})
+        fig.update_layout(title='Closing Prices of 3 Stocks Over Time', xaxis_title='Date', yaxis_title='Closing Price')
+        st.plotly_chart(fig)  
+
+    elif visualization_type == "candle plot":
+        import plotly.graph_objects as go
+        if selected_stock == 'All Stocks':
+            st.write("Candle plot is not available for all stocks, please select one stock")
+            return
+        else:
+            fig = go.Figure(data=[go.Candlestick(x=data.index,
+                            open=data['1. open'],
+                            high=data['2. high'],
+                            low=data['3. low'],
+                            close=data['4. close'])])
+            fig.update_layout(xaxis_title='Date', yaxis_title='Price')
+            st.plotly_chart(fig)
+
+
+
+    
+    
+
 
 # Main app structure
 def main():
@@ -262,7 +350,7 @@ def main():
 
     st.sidebar.title("Data Selection")
     # Ajouter 2 tabs de ilyes et mazigh
-    app_mode = st.sidebar.selectbox("Choose the data you want to view:", [ "Meteo","Earthquakes", ])
+    app_mode = st.sidebar.selectbox("Choose the data you want to view:", [ "Meteo","Earthquakes", "Stock"])
 
 
     # ici aussi
@@ -270,6 +358,8 @@ def main():
         display_meteo_tab()
     elif app_mode == "Earthquakes":
         display_earthquake_tab()
+    elif app_mode == "Stock":
+        display_stock_tab()
 if __name__ == "__main__":
 
     main()
