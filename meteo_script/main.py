@@ -2,9 +2,10 @@ import os
 import pandas as pd
 from pymongo import MongoClient
 from datetime import datetime, timedelta
+import json
 
-# Chemin vers le répertoire contenant les fichiers CSV
-csv_directory = "./meteoData/"
+# Chemin vers le répertoire contenant les fichiers JSON
+json_directory = "./meteoData/"
 
 # Informations d'authentification MongoDB
 # mongo_username = 'mohamedaminebentayeb'
@@ -21,40 +22,73 @@ included_variables = ['t_2m:C', 'precip_1h:mm', 'wind_speed_10m:ms', 'msl_pressu
 client = MongoClient(f"mongodb://localhost:27017/")
 db = client[mongo_database]
 collection = db[mongo_collection]
+def process_weather_data(data):
+    data = data.get("data", []) 
+    # Créer des DataFrames pour chaque variable
+    df_t_2m = pd.DataFrame(columns=["validdate", "t_2m:C"])
+    df_precip_1h = pd.DataFrame(columns=["validdate", "precip_1h:mm"])
+    df_wind_speed_10m = pd.DataFrame(columns=["validdate", "wind_speed_10m:ms"])
+    df_msl_pressure = pd.DataFrame(columns=["validdate", "msl_pressure:hPa"])
 
+    
+
+    # Iterate through each parameter in the data
+    for parameter_data in data:
+        parameter = parameter_data['parameter']
+        coordinates = parameter_data['coordinates'][0]
+        dates = coordinates['dates']
+
+        for date_data in dates:
+            date_str = date_data['date']
+            value = date_data['value']
+
+            # Ajouter les valeurs dans le DataFrame approprié en fonction du paramètre
+            if parameter == 't_2m:C':
+                df_t_2m = df_t_2m.append({"validdate": date_str, "t_2m:C": value}, ignore_index=True)
+            elif parameter == 'precip_1h:mm':
+                df_precip_1h = df_precip_1h.append({"validdate": date_str, "precip_1h:mm": value}, ignore_index=True)
+            elif parameter == 'wind_speed_10m:ms':
+                df_wind_speed_10m = df_wind_speed_10m.append({"validdate": date_str, "wind_speed_10m:ms": value}, ignore_index=True)
+            elif parameter == 'msl_pressure:hPa':
+                df_msl_pressure = df_msl_pressure.append({"validdate": date_str, "msl_pressure:hPa": value}, ignore_index=True)
+
+    # Fusionner les DataFrames en fonction de la colonne "validdate"
+    merged_df = df_t_2m.merge(df_msl_pressure, on="validdate").merge(df_precip_1h, on="validdate").merge(df_wind_speed_10m, on="validdate")
+    #commpare between df_t_2m and df_msl_pressure validdate
+    merged_df["msl_pressure:hPa"]=merged_df["msl_pressure:hPa"].astype(float)
+   
+    return merged_df
 # Fonction pour résumer les données et les enregistrer dans MongoDB
 def summarize_and_store():
-    # Lire tous les fichiers CSV dans le répertoire
-    all_files = os.listdir(csv_directory)
-    csv_files = [file for file in all_files if file.endswith(".csv")]
+    # Lire tous les fichiers JSON dans le répertoire
+    all_files = os.listdir(json_directory)
+    json_files = [file for file in all_files if file.endswith(".json")]
 
-    # Créer un DataFrame vide pour stocker toutes les données
-    all_data = pd.DataFrame()
+    # Créer un dictionnaire vide pour stocker toutes les données
+    all_data = []
 
-    # Lire chaque fichier CSV et concaténer les données en incluant uniquement les variables spécifiées
-    for csv_file in csv_files:
-        file_path = os.path.join(csv_directory, csv_file)
-        df = pd.read_csv(file_path, usecols=included_variables, delimiter=';')
-        all_data = pd.concat([all_data, df], ignore_index=True)
-
-        # Afficher les colonnes du fichier
-        print(f"Colonnes du fichier {csv_file} : {df.columns.tolist()}")
-
-    # Résumer les données en incluant plusieurs statistiques descriptives
-    summary_data = all_data.describe().transpose()
-
-    # Convertir le résultat en dictionnaire pour l'insertion dans MongoDB
-    summary_dict = summary_data.to_dict()
-
-    # Ajouter une clé pour la date du résumé
-    summary_dict['summary_date'] = datetime.utcnow()
-
-    # Insérer les données résumées dans MongoDB
-    collection.insert_one(summary_dict)
+    # Lire chaque fichier JSON et ajouter les données au dictionnaire
+    for json_file in json_files:
+        file_path = os.path.join(json_directory, json_file)
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+            collection_data=process_weather_data(data)
+            #describe collection_data
+            description=collection_data.describe().transpose()
+            print(description)
+            #convertir le résultat en dictionnaire pour l'insertion dans MongoDB
+            description_dict=description.to_dict()
+            #ajouter une clé pour la date du résumé
+            description_dict['summary_date']=datetime.utcnow()
+            #insérer les données résumées dans MongoDB
+            collection.insert_one(description_dict)
+            
+        # Afficher les clés du fichier
+        print(f"Clés du fichier {json_file} : {list(data.keys())}")
 
     # Supprimer les fichiers résumés
-    for csv_file in csv_files:
-        file_path = os.path.join(csv_directory, csv_file)
+    for json_file in json_files:
+        file_path = os.path.join(json_directory, json_file)
         os.remove(file_path)
 
     print("Données résumées enregistrées dans MongoDB et fichiers résumés supprimés.")

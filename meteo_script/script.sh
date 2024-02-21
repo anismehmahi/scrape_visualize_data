@@ -11,11 +11,11 @@ end_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 start_time=$(date -u -d "1 day ago" +"%Y-%m-%dT%H:%M:%SZ")
 
 # Mettre en forme les temps dans le format requis pour l'URL de l'API
-api_url="${api_url}/${start_time}--${end_time}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:ms,msl_pressure:hPa/52.520551,13.461804/csv"
+api_url="${api_url}/${start_time}--${end_time}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:ms,msl_pressure:hPa/52.520551,13.461804/json"
 echo "${api_url}"
 
 # Créer un nom de fichier basé sur la date et l'heure de téléchargement
-output_filename="./meteoData/meteomatics_data_$(date -u +"%Y%m%d_%H%M%S").csv"
+output_filename="./meteoData/meteomatics_data_$(date -u +"%Y%m%d_%H%M%S").json"
 
 # Effectuer la demande avec curl en utilisant l'authentification de base et en stockant les résultats dans le fichier
 curl --user "${username}:${password}" "${api_url}" > "${output_filename}"
