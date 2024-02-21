@@ -1,5 +1,14 @@
 0 * * * * /home/anis/Desktop/projetLinux/scrape_visualize_data/earthquakes/download_data.sh
 3 * * * * /home/anis/Desktop/projetLinux/scrape_visualize_data/earthquakes/summarize_data.py
-0 0 * * * /home/anis/Desktop/projetLinux/scrape_visualize_data/meteo_script/script.sh
-5 0 * * *  python3 /home/anis/Desktop/projetLinux/scrape_visualize_data/meteo_script/main.py
+
+# pour l'API des actions, les données sont rafraîchies quotidiennement, 
+# nous récupérons donc les données tous les jours à 2h30 et les résumons à 3h30
+ 
+30 3 * * * /home/ilyes/scrape_visualize_data/bourse/script_mongo_db.sh
+30 2 * * * /home/ilyes/scrape_visualize_data/bourse/script_appel_api.sh
+
+0 0 * * * /home/amine/Desktop/projetLinux/scrape_visualize_data/meteo_script/script.sh
+5 0 * * *  python3 /home/amine/Desktop/projetLinux/scrape_visualize_data/meteo_script/main.py
+
 10 * * * * /home/anis/Desktop/projetLinux/scrape_visualize_data/app.py
+
