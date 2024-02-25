@@ -5,6 +5,8 @@ import plotly.express as px
 from datetime import datetime
 import plotly.graph_objects as go
 import colorsys
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Initialize MongoDB connection
 client = MongoClient('mongodb://localhost:27017/')
@@ -158,6 +160,35 @@ def display_meteo_tab():
 
             # Afficher le tableau HTML
             st.write(html_table, unsafe_allow_html=True)
+
+# Function to fetch Open Weather data
+def fetch_open_weather_data():
+    db = client['open_weather_data']
+    collection = db['open_weather_summary']
+    return pd.DataFrame(list(collection.find()))
+
+# Function to display Open Weather information
+def display_open_weather():
+    data = fetch_open_weather_data()
+    selected_variable = st.sidebar.selectbox("Choose Variable To Display", ["temperature", "feels_like", "pression", "humidite"] )
+
+    # Display a table with the fetched data
+    st.write("Paris Open Weather Data Summary")
+    st.table(data[['temperature', 'feels_like', 'description', 'pression', 'humidite']])
+
+    # Create histograms using seaborn
+    st.write(selected_variable, "Histogram")
+    fig, ax = plt.subplots(figsize=(4, 2))  # Adjust the figsize as needed
+    sns.histplot(data[selected_variable], kde=True, ax=ax, binwidth=0.5)
+    st.pyplot(fig)
+    
+
+    # Create box plot for temperature
+    st.write(selected_variable, "Box Plot")
+    fig, ax = plt.subplots(figsize=(4, 2))
+    sns.boxplot(x=data[selected_variable], ax=ax, width=0.5)
+    st.pyplot(fig)
+
 
 
 # Helper function to convert timestamp to a Python datetime object
@@ -350,7 +381,7 @@ def main():
 
     st.sidebar.title("Data Selection")
     # Ajouter 2 tabs de ilyes et mazigh
-    app_mode = st.sidebar.selectbox("Choose the data you want to view:", [ "Meteo","Earthquakes", "Stock"])
+    app_mode = st.sidebar.selectbox("Choose the data you want to view:", [ "Meteo","Earthquakes", "Stock", "Open_Weather"])
 
 
     # ici aussi
@@ -360,6 +391,8 @@ def main():
         display_earthquake_tab()
     elif app_mode == "Stock":
         display_stock_tab()
+    elif app_mode == "Open_Weather":
+        display_open_weather()
 if __name__ == "__main__":
 
     main()
