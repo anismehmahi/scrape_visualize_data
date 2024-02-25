@@ -10,5 +10,8 @@
 0 0 * * * /home/amine/Desktop/projetLinux/scrape_visualize_data/meteo_script/script.sh
 5 0 * * *  python3 /home/amine/Desktop/projetLinux/scrape_visualize_data/meteo_script/main.py
 
+0 * * * * /home/mazigh/Desktop/ProjetLinux/scrape_visualize_data/open_weather_map/download_data.sh
+5 0 * * * /home/mazigh/Desktop/ProjetLinux/scrape_visualize_data/open_weather_map/summarize_data.py
+
 10 * * * * /home/anis/Desktop/projetLinux/scrape_visualize_data/app.py
 
